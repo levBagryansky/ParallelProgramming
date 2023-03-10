@@ -20,32 +20,34 @@ int main(int argc, char** argv) {
     // Get the rank of the process
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int size = 0;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
     if(rank == 0) {
         // Sum it
-        printf("my rank == 0\n");
         double sum = 0;
         double buf = 0;
-        for (int i = 0; i < 2; ++i) {
-            printf("wait for next term\n");
+        for (int i = 0; i < size - 1; ++i) {
             MPI_Recv(&buf, 1, MPI_DOUBLE, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             sum += buf;
         }
-        printf("sum  = %lf\n", sum);
+        printf("final sum  = %lf\n", sum);
     } else {
         // Compute a term
-        double term = 1.0 / rank;
-        printf("Sent %lf\n", term);
-        int sent = MPI_Send(&term,
-                             1,
-                             MPI_DOUBLE,
-                             0,
-                             5,
-                             MPI_COMM_WORLD);
+        int mod = rank % (size - 1);
+        double local_sum = 0.0;
+        for (int i = 0; 1 + mod + i * (size - 1) <= N; ++i) {
+            double term = 1.0 / (1 + mod + i * (size - 1));
+            local_sum += term;
+        }
+        int sent = MPI_Send(&local_sum,
+                            1,
+                            MPI_DOUBLE,
+                            0,
+                            5,
+                            MPI_COMM_WORLD);
         assert(sent == MPI_SUCCESS);
 
     }
     MPI_Finalize();
     return 0;
-
-    // Finalize the MPI environment.
 }
