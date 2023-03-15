@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
         }
         printf("final sum  = %lf\n", sum);
     } else {
-        // Compute a term
+        // Compute a local sum several term
         int mod = rank % (size - 1);
         double local_sum = 0.0;
         for (int i = 0; 1 + mod + i * (size - 1) <= N; ++i) {
