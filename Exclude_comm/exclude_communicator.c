@@ -7,11 +7,11 @@ int main(int argc, char** argv) {
     // Initialize the MPI environment
     MPI_Init(&argc, &argv);
 
-    if (argc != 1) {
+    if (argc != 2) {
         printf("Wrong number of arguments\n");
         exit(-1);
     }
-
+    int N = atoi(argv[1]);
 
     // Get the rank of the process
     int rank;
@@ -45,13 +45,29 @@ int main(int argc, char** argv) {
     printf("Hello from process %i out of %i\n", local_rank, local_size);
 
     int source = local_rank + 1;
-    int result = 0;
+    double result = 0;
     int root = 0;
 
-    MPI_Reduce(&source, &result, 1, MPI_INT, MPI_SUM, root, new_comm);
-    if (local_rank == root) {
-        printf("result = %i\n", result);
+    double local_sum = 0.0;
+    if (local_size > N) {
+        local_size = N;
     }
+    if (rank > N) {
+        local_sum = 0.0;
+    } else {
+        int mod = local_rank % (local_size);
+        for (int i = 0; 1 + mod + i * (local_size) <= N; ++i) {
+            //printf("term = %i\n", 1 + mod + i * (local_size));
+            double term = 1.0 / (1 + mod + i * (local_size));
+            local_sum += term;
+        }
+    }
+    MPI_Reduce(&local_sum, &result, 1, MPI_DOUBLE, MPI_SUM, root, new_comm);
+    if (local_rank == root) {
+        printf("result = %lf\n", result);
+    }
+
+
     MPI_Finalize();
     return 0;
 }
