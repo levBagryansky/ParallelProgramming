@@ -1,13 +1,21 @@
 ## Every process write its rank by offset
 ## Running
 ### From project directory run
-`$ cmake . -B build`
+```
+$ cmake . -B build
+```
 
-`$ cd build`
+```
+$ cd build
+```
 
-`$ make`
+```
+$ make
+```
 
-`$ mpirun -np 100 ./write_process && bat file.txt`
+```
+$ mpirun -np 100 ./write_process && bat file.txt
+```
 
 ### The result will be as follows:
 ```
