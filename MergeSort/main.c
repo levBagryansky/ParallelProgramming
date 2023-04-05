@@ -30,6 +30,36 @@ int compute_loc(int rank, int world) {
     return loc_size;
 }
 
+int * merge(int *arr1, int len1, int *arr2, int len2) {
+    int *result = (int *) malloc(sizeof(int) * (len1 + len2));
+    int i1 = 0;
+    int i2 = 0;
+    printf("arr1:\n");
+    print_arr(arr1, len1);
+    printf("arr2:\n");
+    print_arr(arr2, len2);
+    printf("merging\n");
+    while (i1 + i2 < len1 + len2) {
+        int next;
+        if (i1 == len1) {
+            next = arr2[i2];
+            i2++;
+        } else if (i2 == len2){
+            next = arr1[i1];
+            i1++;
+        } else if (arr2[i2] < arr1[i1]){
+            next = arr2[i2];
+            i2++;
+        } else {
+            next = arr1[i1];
+            i1++;
+        }
+        result[i1 + i2 - 1] = next;
+    }
+    return result;
+
+}
+
 int main(int argc, char **argv) {
     MPI_Init(&argc, &argv);
 
