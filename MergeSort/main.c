@@ -107,9 +107,9 @@ int main(int argc, char **argv) {
         qsort(arr, size, sizeof(int), (int(*) (const void *, const void *)) comp);
         end = clock();
         float seconds = (float)(end - start) / CLOCKS_PER_SEC;
-        printf("Waited for %f seconds\n", seconds);
+        printf("%f", seconds);
         if (!memcmp(arr, buf, res_size)) {
-            printf("array was sorted right\n");
+            //printf("array was sorted right\n");
         }
         //printf("Expected\n");
         //print_arr(arr, size);
