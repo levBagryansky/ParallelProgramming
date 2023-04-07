@@ -4,7 +4,6 @@
 #include <mpi.h>
 #include <unistd.h>
 #include <string.h>
-#include <assert.h>
 
 int size = 0;
 
