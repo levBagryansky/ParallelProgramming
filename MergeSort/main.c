@@ -15,6 +15,7 @@ int comp (const int *i, const int *j);
 
 int main(int argc, char **argv) {
     clock_t start, end;
+    double w_start, w_end;
     MPI_Init(&argc, &argv);
 
     int my_rank;
@@ -37,6 +38,7 @@ int main(int argc, char **argv) {
         //print_arr(arr, size);
         // Send the according part to every processor
         start = clock();
+        w_start = MPI_Wtime();
         int *message = arr + loc_size;
         //printf("[Processor %i] loc_size = %i\n", my_rank, loc_size);
         for (int i = 1; i < world; i++) {
@@ -103,10 +105,12 @@ int main(int argc, char **argv) {
             //print_arr(buf, res_size);
         }
         free(message_from);
-        qsort(arr, size, sizeof(int), (int(*) (const void *, const void *)) comp);
         end = clock();
+        w_end = MPI_Wtime();;
         float seconds = (float)(end - start) / CLOCKS_PER_SEC;
-        printf("%f", seconds);
+        //printf("%f\n", seconds);
+        printf("%f", -w_start+w_end);
+        //qsort(arr, size, sizeof(int), (int(*) (const void *, const void *)) comp);
         if (!memcmp(arr, buf, res_size)) {
             //printf("array was sorted right\n");
         }

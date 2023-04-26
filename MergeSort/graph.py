@@ -12,7 +12,7 @@ os.chdir("build")
 print_cyan("make")
 os.system("make")
 arr = []
-myrange = range(1, 50)
+myrange = range(1, 25)
 
 for i in myrange:
     cmd = "mpirun -np " + str(i) + " ./main " + size
