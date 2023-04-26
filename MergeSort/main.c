@@ -14,7 +14,6 @@ int * merge(int *arr1, int len1, int *arr2, int len2);
 int comp (const int *i, const int *j);
 
 int main(int argc, char **argv) {
-    clock_t start, end;
     double w_start, w_end;
     MPI_Init(&argc, &argv);
 
@@ -37,7 +36,6 @@ int main(int argc, char **argv) {
         arr = generate_arr();
         //print_arr(arr, size);
         // Send the according part to every processor
-        start = clock();
         w_start = MPI_Wtime();
         int *message = arr + loc_size;
         //printf("[Processor %i] loc_size = %i\n", my_rank, loc_size);
@@ -71,51 +69,102 @@ int main(int argc, char **argv) {
     //printf("[processor %i] my part:\n", my_rank);
     //print_arr(buf, loc_size);
     if (my_rank) {
-        MPI_Send(buf,
-                 loc_size,
-                 MPI_INT,
-                 0,
-                 0,
-                 MPI_COMM_WORLD
-                 );
+//        MPI_Send(buf,
+//                 loc_size,
+//                 MPI_INT,
+//                 0,
+//                 0,
+//                 MPI_COMM_WORLD
+//                 );
+        int mod;
+        int *res;
+        int res_size = loc_size;
+        for (int base = 2; base < world * 2; base *= 2) {
+            mod = my_rank % base;
+            if (mod == 0) {
+                int src = my_rank + base / 2;
+                if (src < world) {
+                    int message_len = (loc_size + 1) * base;
+                    int *message_from = (int *) malloc(message_len * sizeof(int));
+                    MPI_Status status;
+                    MPI_Recv(
+                            message_from,
+                            message_len,
+                            MPI_INT,
+                            src,
+                            MPI_ANY_TAG,
+                            MPI_COMM_WORLD,
+                            &status
+                    );
+
+                    //int message_size = compute_loc(status.MPI_SOURCE, world);
+                    MPI_Get_count(&status, MPI_INT, &message_len);
+                    res = merge(buf, res_size, message_from, message_len);
+                    res_size += message_len;
+                    free(buf);
+                    buf = res;
+                    //printf("[processor %i]: merged from %i\n", my_rank, status.MPI_SOURCE);
+                    //print_arr(message_from, message_size);
+                    //print_arr(buf, res_size);
+                    free(message_from);
+                }
+            } else if (mod == base / 2) {
+                MPI_Send(
+                         buf,
+                         res_size,
+                         MPI_INT,
+                         my_rank - base / 2,
+                         0,
+                         MPI_COMM_WORLD
+                );
+                //printf("[processor %i]: sent to %i\n", my_rank, my_rank - base / 2);
+                break;
+            } else {
+                break;
+            }
+        }
     }
     if (my_rank == 0) {
         int *res;
         int res_size = loc_size;
-        int* message_from = (int *) malloc((loc_size + 1) * sizeof(int));
-        for (int i = 0; i < world - 1; ++i) {
+        for (int i = 1; i < world; i *= 2) {
+            int message_len = (loc_size + 1) * (i + 1);
+            int* message_from = (int *) malloc(message_len * sizeof(int));
             MPI_Status status;
             MPI_Recv
             (
                 message_from,
-                loc_size + 1,
+                message_len,
                 MPI_INT,
                 MPI_ANY_SOURCE,
                 MPI_ANY_TAG,
                 MPI_COMM_WORLD,
                 &status
             );
-            int message_size = compute_loc(status.MPI_SOURCE, world);
-            res = merge(buf, res_size, message_from, message_size);
-            res_size += message_size;
+
+            //int message_size = compute_loc(status.MPI_SOURCE, world);
+            MPI_Get_count(&status, MPI_INT, &message_len);
+            res = merge(buf, res_size, message_from, message_len);
+            //printf("[processor %i]: merged from %i\n", my_rank, status.MPI_SOURCE);
+            res_size += message_len;
             free(buf);
             buf = res;
             //printf("merged from %i\n", status.MPI_SOURCE);
             //print_arr(message_from, message_size);
             //print_arr(buf, res_size);
+            free(message_from);
         }
-        free(message_from);
-        end = clock();
-        w_end = MPI_Wtime();;
-        float seconds = (float)(end - start) / CLOCKS_PER_SEC;
-        //printf("%f\n", seconds);
+        w_end = MPI_Wtime();
         printf("%f", -w_start+w_end);
-        //qsort(arr, size, sizeof(int), (int(*) (const void *, const void *)) comp);
-        if (!memcmp(arr, buf, res_size)) {
-            //printf("array was sorted right\n");
-        }
-        //printf("Expected\n");
-        //print_arr(arr, size);
+//        printf("time is %f, res_size = %i\n", -w_start+w_end, res_size);
+//        qsort(arr, size, sizeof(int), (int(*) (const void *, const void *)) comp);
+//        if (!memcmp(arr, buf, res_size)) {
+//            printf("array was sorted right\n");
+//        } else {
+//            printf("array was not sorted right\n");
+//            printf("Expected\n");
+//            print_arr(arr, size);
+//        }
         free(arr);
     }
     free(buf);
