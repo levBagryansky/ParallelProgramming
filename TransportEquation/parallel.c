@@ -2,12 +2,19 @@
 #include <stdlib.h>
 #include <mpi.h>
 #include <math.h>
+#include <string.h>
 
 #define DB_PRINT(fmt, ...) printf("[MPI process %d, line %d]: " fmt, my_rank, __LINE__, ##__VA_ARGS__)
 int my_rank;
 
 #define X 1.0
 #define T 1.0
+
+/**
+ * Size of half of cell for one double in file.
+ */
+#define HALF_CELL 10
+#define HALF_CELL_STR "10"
 
 int len_x;
 int len_t;
@@ -40,24 +47,11 @@ double **empty_matrix(int len_x, int len_t) {
     return res;
 }
 
-void init_matrix(double **empty, int len_x, int len_t) {
-    for (int i = 0; i < len_x; ++i) {
-        empty[0][i] = phi(h * i);
+void free_matrix(double **matrix, int len_t) {
+    for (int t = 0; t < len_t; ++t) {
+        free(matrix[t]);
     }
-    for (int i = 0; i < len_t; ++i) {
-        empty[i][0] = psi(tau * i);
-    }
-}
-
-void init_fragment(double **empty, int  start_x, int finish_x, int len_t) {
-    if (start_x == 0) {
-        for (int t = 0; t < len_t; ++t) {
-            empty[t][0] = psi(tau * t);
-        }
-    }
-    for (int x = 0; x < finish_x - start_x; ++x) {
-        empty[0][x] = phi(h * (x + start_x));
-    }
+    free(matrix);
 }
 
 void print_matrix(double **matrix, int len_x, int len_t) {
@@ -72,6 +66,17 @@ void print_matrix(double **matrix, int len_x, int len_t) {
             }
         }
         printf("\n");
+    }
+}
+
+void init_fragment(double **empty, int  start_x, int finish_x, int len_t) {
+    if (start_x == 0) {
+        for (int t = 0; t < len_t; ++t) {
+            empty[t][0] = psi(tau * t);
+        }
+    }
+    for (int x = 0; x < finish_x - start_x; ++x) {
+        empty[0][x] = phi(h * (x + start_x));
     }
 }
 
@@ -134,7 +139,7 @@ void compute_section(double **section, int start_x, int finish_x, int next_rank)
                     MPI_COMM_WORLD,
                     &status
                     );
-            DB_PRINT("prev_row[%i] = %lf\n", t, prev_row[t]);
+            //DB_PRINT("prev_row[%i] = %lf\n", t, prev_row[t]);
             for (int x = 0; x < finish_x - start_x; ++x) {
                 if (t == 0){
                     ;
@@ -163,6 +168,57 @@ void compute_section(double **section, int start_x, int finish_x, int next_rank)
     }
 }
 
+/**
+ * Saves section to the common file consistent with other fragments.
+ * @param file File to save fragment to.
+ * @param section Section to save.
+ * @param start_x Starting position in general matrix.
+ * @param finish_x Finishing position in general matrix.
+ */
+void save(char* file, double **section, int start_x, int finish_x) {
+    MPI_File_delete(file, MPI_INFO_NULL);
+    MPI_File handle;
+    MPI_File_open(
+            MPI_COMM_WORLD,
+            file,
+            MPI_MODE_RDWR | MPI_MODE_CREATE,
+            MPI_INFO_NULL,
+            &handle
+            );
+    for (int t = 0; t < len_t; ++t) {
+        int offset = 2 * HALF_CELL * (len_x * t + start_x);
+        char* line = (char *) calloc(2 * HALF_CELL * (finish_x - start_x), 1);
+        for (int x = 0; x < finish_x - start_x; ++x) {
+            char number[25] = {' '};
+            number[20] = 0;
+            sprintf(number, "%#.17g", section[t][x]);
+            int last_in_line = (x + start_x == len_x - 1);
+            number[17] = last_in_line ? ' ': ',';
+            number[18] = ' ';
+            number[19] = last_in_line ? '\n' : ' ';
+            //DB_PRINT("number = %s\n", number);
+            memcpy(line + x * 20, number, 20);
+        }
+        MPI_Status status;
+        MPI_File_write_at(
+                handle,
+                offset,
+                line,
+                2 * HALF_CELL * (finish_x - start_x),
+                MPI_CHAR,
+                &status
+        );
+        for (int i = 0; i < 2 * HALF_CELL * (finish_x - start_x); ++i) {
+            char c = line[i];
+            if (!(c == ' ' || c == ',' || c == '.' || c == '\n' || (c <= '9' && c >= '0') || c == '-')){
+                DB_PRINT("c == %i == %c\n", c, c);
+            }
+        }
+        free(line);
+    }
+    MPI_File_close(&handle);
+}
+
 int main(int argc, char* argv[])
 {
     if (argc != 3 && argc != 4) {
@@ -173,7 +229,7 @@ int main(int argc, char* argv[])
     if (argc == 4) {
         file = argv[3];
     } else {
-        file = "solution.scv";
+        file = "solution.csv";
     }
     len_x = strtol(argv[1], NULL, 10);
     len_t = strtol(argv[2], NULL, 10);
@@ -187,23 +243,42 @@ int main(int argc, char* argv[])
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
+    int start_x = my_rank * (len_x / world_size);
+    int next_start = (my_rank + 1) * (len_x / world_size);
+    int finish_x = (my_rank == world_size - 1) ? len_x : next_start;
+    DB_PRINT("start = %i, finish = %i\n", start_x, finish_x);
+    double **fragment = empty_matrix(finish_x - start_x, len_t);
+    init_fragment(fragment, start_x, finish_x, len_t);
+    compute_section(
+            fragment,
+            start_x,
+            finish_x,
+            (my_rank + 1 == world_size) ? -1: my_rank + 1
+            );
+    save(file, fragment, start_x, finish_x);
+    free_matrix(fragment, len_t);
+    /*
     double **fragment;
     if (my_rank == 0) {
         fragment = empty_matrix(4, 10);
         init_fragment(fragment, 0, 4, 10);
         compute_section(fragment, 0, 4, 1);
+        save(file, fragment, 0, 4);
         //print_matrix(fragment, 4, 10);
     } else if (my_rank == 1){
         fragment = empty_matrix(3, 10);
         init_fragment(fragment, 4, 7, 10);
         compute_section(fragment, 4, 7, 2);
         print_matrix(fragment, 3, 10);
+        save(file, fragment, 4, 7);
     } else {
         fragment = empty_matrix(3, 10);
         init_fragment(fragment, 7, 10, 10);
         compute_section(fragment, 7, 10, -1);
         //print_matrix(fragment, 3, 10);
+        save(file, fragment, 7, 10);
     }
+     */
     MPI_Finalize();
     return EXIT_SUCCESS;
 }
