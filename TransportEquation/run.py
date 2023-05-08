@@ -10,7 +10,6 @@ matplotlib.use('Agg')
 def print_cyan(str):
     print(colored(str, "cyan"))
 
-
 def makeplot(x, y, xlabel = "x", ylabel = "y", title = "y(x)", show = 1, grid = 1, label = 0):
     if label != 0:
         plt.plot(x, y, label = label, color = np.random.rand(3))
@@ -44,7 +43,7 @@ def make_surface(u, t, x, title=''):
     fig = plt.figure(figsize=(20, 20))
     ax = plt.axes(projection='3d')
     ts, xs = np.meshgrid(t, x)
-    ax.plot_surface(ts, xs, u.transpose(), rstride=1, cstride=1, cmap='jet', edgecolor='none')
+    ax.plot_surface(ts, xs, u, rstride=1, cstride=1, cmap='jet', edgecolor='none')
     ax.view_init(20, -130)
     size=22
     if title != '':
