@@ -8,7 +8,7 @@ Read [here](https://en.wikipedia.org/wiki/Finite_difference_method#Explicit_meth
 ![Solution](graphs/Solution.png)
 
 ## There are implemented 2 programs that computed it.
-## `sequential.c` is sequential solution and `parallel.c` do it in parallel.
+## `sequential.c` is sequential solution and `parallel.c` does it in parallel.
 ## Graphs below shows parameters of parallel computation:
 
 ### Complexity of algorithm on 5 processes:
