@@ -63,6 +63,9 @@ else:
     numprocs = args[3]
 u, ts, xs = calculate_sol(arg1, arg2, numprocs)
 make_surface(u, ts, xs, title="Solution")
+if not os.path.isdir("graphs"):
+    os.mkdir("graphs");
+os.chdir("graphs")
 current_dir = os.getcwd()
-print_cyan(f"Saving graph to f{current_dir}")
+print_cyan(f"Saving graph to {current_dir}/Solution.png")
 plt.savefig('Solution.png')
