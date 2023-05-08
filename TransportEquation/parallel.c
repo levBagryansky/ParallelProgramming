@@ -198,7 +198,8 @@ void init_fragment(double **empty, int  start_x, int finish_x, int len_t) {
 }
 
 double inline static compute_point(double eq_eq, double eq_plus, double plus_eq, int x, int t) {
-    return (2 * f(tau * (t), h * (x)) * tau - (plus_eq - eq_eq - eq_plus) - beta * alpha() * (eq_plus - eq_eq - plus_eq)) / (1 + beta * alpha());
+    double res = (2 * f(tau * (t), h * (x)) * tau - (plus_eq - eq_eq - eq_plus) - beta * alpha() * (eq_plus - eq_eq - plus_eq)) / (1 + beta * alpha());
+    return res;
 }
 
 void compute_section(double **section, int start_x, int finish_x, int next_rank) {
@@ -288,12 +289,16 @@ void save(char* file, double **section, int start_x, int finish_x) {
         for (int x = 0; x < finish_x - start_x; ++x) {
             char number[25] = {' '};
             number[20] = 0;
-            sprintf(number, "%#.17g", section[t][x]);
+            sprintf(number, "%.10lf", section[t][x]);
+            for (int i = 0; i < 25; ++i) {
+                char c = number[i];
+                if (c == 0) {
+                    number[i] = ' ';
+                }
+            }
             int last_in_line = (x + start_x == len_x - 1);
             number[17] = last_in_line ? ' ': ',';
-            number[18] = ' ';
             number[19] = last_in_line ? '\n' : ' ';
-            //DB_PRINT("number = %s\n", number);
             memcpy(line + x * 20, number, 20);
         }
         MPI_Status status;
