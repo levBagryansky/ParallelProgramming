@@ -36,7 +36,7 @@ while threads < 32:
 plt.figure(figsize=[12, 5], dpi=100)
 plt.plot(list(sizes), accelerations, '-o', markersize=4, linewidth=2, label='y1', color = np.random.rand(3))
 
-plt.xlabel("threads")
+plt.xlabel("num of procs")
 plt.ylabel("time / seq_time")
 plt.title("Acceleration")
 plt.minorticks_on()
@@ -51,7 +51,7 @@ plt.savefig('Acceleration.png')
 
 plt.figure(figsize=[12, 5], dpi=100)
 plt.plot(list(sizes), efficiencies, '-o', markersize=4, linewidth=2, label='y1', color = np.random.rand(3))
-plt.xlabel("threads")
+plt.xlabel("num of procs")
 plt.ylabel("time / (seq_time * processes)")
 plt.title("Efficiency")
 plt.minorticks_on()

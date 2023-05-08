@@ -1,6 +1,6 @@
 # Parallel solving of transport equation via rectangle scheme.
 ## Equation
-### Here the equation below is sold via rectangle scheme.
+### Here the equation below is solved via rectangle scheme.
 Read [here](https://en.wikipedia.org/wiki/Finite_difference_method#Explicit_method) about Finite difference methods.
 ![img.png](graphs/img.png)
 
