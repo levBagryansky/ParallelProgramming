@@ -4,6 +4,9 @@
 #include <math.h>
 #include <string.h>
 
+/**
+ * Macros. Appends rank and line before the message.
+ */
 #define DB_PRINT(fmt, ...) printf("[MPI process %d, line %d]: " fmt, my_rank, __LINE__, ##__VA_ARGS__)
 int my_rank;
 
