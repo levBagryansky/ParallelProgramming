@@ -1,10 +1,10 @@
-# introductory thread tasks 
+# Introductory thread tasks 
 ### To build the project:
 ```shell
 cmake . -B build/ 
 cd build && make
 ```
-## sum 
+## Sum 
 ### Counts the sum of the first N terms of the harmonic series. Run:
 ```shell
 ./Sum <num_of_threads> <num_of_terms>
