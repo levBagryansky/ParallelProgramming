@@ -12,6 +12,6 @@ make
 ```shell
 python3 acceleration.py 
 ```
-### the code above creates `graphs/Acceleration.png` and `graphs/Efficiency.png`:
+### The code above creates `graphs/Acceleration.png` and `graphs/Efficiency.png`:
 ![](graphs/Acceleration.png)
 ![](graphs/Efficiency.png)
