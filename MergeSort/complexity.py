@@ -15,7 +15,7 @@ os.system("make")
 resultes = []
 sizes = []
 while int(size) < 5 * (10 ** 7):
-    cmd = "mpirun -np " + str(threads) + " ./main " + size
+    cmd = "mpirun -np " + str(threads) + " --oversubscribe ./main " + size
     result = subprocess.check_output(cmd, shell=True, text=True)
     print("size of array = %s: time = %ss" % (size, result))
     sizes.append(int(size))

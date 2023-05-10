@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
     }
     size = strtol(argv[1], NULL, 10);
     int loc_size = compute_loc(my_rank, world);
-    int *buf = (int *) malloc(loc_size * sizeof(int));
+    int *buf = (int *) malloc(2 * loc_size * sizeof(int));
     int *arr;
     if (my_rank == 0) {
         arr = generate_arr();
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
         MPI_Status status;
         MPI_Recv(
             buf,
-            loc_size,
+            2 * loc_size,
             MPI_INT,
             0,
             MPI_ANY_TAG,
@@ -85,11 +85,11 @@ int main(int argc, char **argv) {
                 int src = my_rank + base / 2;
                 if (src < world) {
                     int message_len = (loc_size + 1) * base;
-                    int *message_from = (int *) malloc(message_len * sizeof(int));
+                    int *message_from = (int *) malloc(4 * message_len * sizeof(int));
                     MPI_Status status;
                     MPI_Recv(
                             message_from,
-                            message_len,
+                            4 * message_len,
                             MPI_INT,
                             src,
                             MPI_ANY_TAG,
@@ -129,12 +129,12 @@ int main(int argc, char **argv) {
         int res_size = loc_size;
         for (int i = 1; i < world; i *= 2) {
             int message_len = (loc_size + 1) * (i + 1);
-            int* message_from = (int *) malloc(message_len * sizeof(int));
+            int* message_from = (int *) malloc(2 * message_len * sizeof(int));
             MPI_Status status;
             MPI_Recv
             (
                 message_from,
-                message_len,
+                2 * message_len,
                 MPI_INT,
                 MPI_ANY_SOURCE,
                 MPI_ANY_TAG,

@@ -15,7 +15,7 @@ arr = []
 myrange = range(1, 25)
 
 for i in myrange:
-    cmd = "mpirun -np " + str(i) + " ./main " + size
+    cmd = "mpirun -np " + str(i) + " --oversubscribe ./main " + size
     result = subprocess.check_output(cmd, shell=True, text=True)
     print("num = %s: time = %ss" % (str(i), result))
     arr.append(float(result))
