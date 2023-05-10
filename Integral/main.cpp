@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <chrono>
 #include <mutex>
 #include <thread>
 
@@ -21,16 +22,17 @@ int main(int argc, char** argv) {
         std::cout << "Please provide <n_threads> and <error> only" << std::endl;
         exit(-1);
     }
+    auto start = std::chrono::high_resolution_clock::now();
     long double curr_x = 0.001;
     long double sum = 0.0;
     int threads = (int) strtol(argv[1], nullptr, 10);
     const long double specific_error = strtod(argv[2], nullptr) / finish_x;
-    printf("spec_error = %.100Lf\n", specific_error);
+    //printf("spec_error = %.100Lf\n", specific_error);
     portion  = static_cast<int>(1.0 / (threads * sqrtl(specific_error)));
     if (portion < 50) {
         portion = 50;
     }
-    printf("portion = %i\n", portion);
+    //printf("portion = %i\n", portion);
     auto f = [&curr_x, &sum, specific_error]() {
         int statistic = 0;
         while (curr_x <= finish_x) {
@@ -45,7 +47,6 @@ int main(int argc, char** argv) {
                 break;
             }
             long double loc_sum = 0.0;
-            const long double loc_start = loc_x;
             if (loc_x + h * portion >= finish_x) {
                 const int iters = static_cast<int>((finish_x - loc_x) / h);
                 for (int i = 0; i < iters; ++i) {
@@ -62,13 +63,12 @@ int main(int argc, char** argv) {
                 }
                 loc_sum *= h;
             }
-            //printf("h = %.100Lf, loc_sum = %0.5Lf, started from %Lf to %Lf\n", h, loc_sum, loc_start, loc_x);
             mutex_sum.lock();
             sum += loc_sum;
             mutex_sum.unlock();
             statistic++;
         }
-        printf("this thread made %i portions\n", statistic);
+        //printf("this thread made %i portions\n", statistic);
     };
     std::thread all[threads];
     for (int i = 0; i < threads; ++i) {
@@ -76,7 +76,10 @@ int main(int argc, char** argv) {
     }
     for (int i = 0; i < threads; ++i) {
         all[i].join();
-    };
-    printf("%0.20Lf\n", sum);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout <<
+              std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    //printf("%0.20Lf\n", sum);
     return 0;
 }
