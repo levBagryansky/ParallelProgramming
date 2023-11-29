@@ -2,15 +2,16 @@
 #include <stdlib.h>
 #include <mpi.h>
 #include <math.h>
-#include <string.h>
 
 /**
  * Macros. Appends rank and line before the message.
  */
-#define DB_PRINT(fmt, ...) printf("[MPI process %d, line %d]: " fmt, my_rank, __LINE__, ##__VA_ARGS__)
+#define DB_PRINT(fmt, ...) ; //printf("[MPI process %d, line %d]: " fmt, my_rank, __LINE__, ##__VA_ARGS__)
 
-#define YSIZE 10000
-#define XSIZE 10000
+#define SIZE 10000
+
+#define YSIZE SIZE
+#define XSIZE SIZE
 
 int my_rank;
 
@@ -38,6 +39,22 @@ void initMatrix(double** matrix) {
     }
 }
 
+void foldMatrixByVector(double **matrix, const double *vector, const int len) {
+    int y0 = (int) vector[0];
+    int x0 = (int) vector[1];
+    DB_PRINT("y0 = %i, x0 = %i, len = %i\n", y0, x0, len);
+    for (int x = x0, y = y0, i = 2; i < len; ++i, ++y, x += 8) {
+        matrix[y][x] = vector[i];
+        DB_PRINT("matrix[%i][%i] = vector[%i] = %lf\n", y, x, i, matrix[y][x]);
+        if(x >= XSIZE) {
+            DB_PRINT("x >= XSIZE, x = %i\n", x);
+        }
+        if(y >= YSIZE) {
+            DB_PRINT("y >= YSIZE\n");
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     if (argc != 1 && argc != 2) {
         printf("Wrong number of args! Please provide 2 arguments\n");
@@ -47,7 +64,7 @@ int main(int argc, char* argv[]) {
     if (argc == 2) {
         file = argv[3];
     } else {
-        file = "result.csv";
+        file = "result_parallel.csv";
     }
     MPI_Init(&argc, &argv);
     double** a = empty_matrix(YSIZE, XSIZE);
@@ -83,7 +100,9 @@ int main(int argc, char* argv[]) {
             MPI_Get_count(&status, MPI_DOUBLE, &message_len);
             DB_PRINT("get message from %i, len = %i, y0 = %i, x0 = %i\n",
                status.MPI_SOURCE, message_len, y0, x0);
-        }
+            foldMatrixByVector(a, buf, message_len);}
+        DB_PRINT("after getting message, matrix[%i][%i] = %lf\n", 1, 17, a[1][17]);
+        DB_PRINT("after getting message, matrix[%i][%i] = %lf\n", 1, 16, a[1][16]);
     } else {
         // Not null rank
         int s = world_size - 1; // executing processes
@@ -93,18 +112,23 @@ int main(int argc, char* argv[]) {
             for (int curr_x0 = 0; curr_x0 < 8; ++curr_x0) {
                 message[0] = (double) curr_y0;
                 message[1] = (double) curr_x0;
-                //DB_PRINT("curr_yo = %i, curr_x0 = %i\n", curr_y0, curr_x0);
+                DB_PRINT("curr_y0 = %i, curr_x0 = %i\n", curr_y0, curr_x0);
                 double *arr = message + 2;
                 int y = curr_y0;
                 int x = curr_x0;
                 arr[0] = a[curr_y0][curr_x0];
+                DB_PRINT("arr[%i] = %lf\n", 0, arr[0]);
                 int i = 1;
+                y += 1;
+                x += 8;
                 while (y < YSIZE && x < XSIZE) {
                     arr[i] = sin(5 * arr[i - 1]);
+                    DB_PRINT("arr[%i] = %lf, y = %i, x = %i\n", i, arr[i], y, x);
                     i++;
                     y += 1;
                     x += 8;
                 }
+                DB_PRINT("i after first while = %i\n", i);
                 MPI_Send(
                     message,
                     i + 2,
@@ -116,22 +140,30 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        for (int curr_x0 = (my_rank-1) % 8 + 8; curr_x0 < XSIZE; ++curr_x0) {
+        for (int curr_x0 = (my_rank-1) % 8 + 8; curr_x0 < XSIZE; curr_x0 += s) {
+            if ((my_rank-1) % 8 != curr_x0) {
+                DB_PRINT("(%i-1) mod 8 + 8 != %i\n", my_rank, curr_x0);
+            }
             message[0] = 0.0;
             message[1] = (double) curr_x0;
             int curr_y0 = 0;
             int x = curr_x0;
             int y = curr_y0;
+            DB_PRINT("curr_y0 = %i, curr_x0 = %i\n", curr_y0, curr_x0);
             double *arr = message + 2;
             arr[0] = a[0][curr_x0];
+            y += 1;
+            x += 8;
             int i = 1;
             while (y < YSIZE && x < XSIZE) {
                 arr[i] = sin(5 * arr[i - 1]);
+                DB_PRINT("arr[%i] = %lf, y = %i, x = %i\n", i, arr[i], y, x);
                 i++;
                 y += 1;
                 x += 8;
             }
-            MPI_Send(
+            DB_PRINT("i after second while = %i\n", i);
+            MPI_Ssend(
                 message,
                 i + 2,
                 MPI_DOUBLE,
@@ -143,7 +175,23 @@ int main(int argc, char* argv[]) {
     }
 
     if (my_rank == 0) {
-        // print;
+        FILE *ff;
+        ff = fopen(file,"w");
+        DB_PRINT("matrix[%i][%i] = %lf\n", 1, 17, a[1][17]);
+        DB_PRINT("matrix[%i][%i] = %lf\n", 1, 16, a[1][16]);
+        for(int y= 0; y < YSIZE; y++){
+            for (int x= 0; x < XSIZE; x++){
+                fprintf(ff,"%f ",a[y][x]);
+                printf("%f ",a[y][x]);
+                if (x < XSIZE - 1) {
+                    fprintf(ff,", ");
+                    printf(", ");
+                }
+            }
+            fprintf(ff, "\n");
+            printf("\n");
+        }
+        fclose(ff);
     }
     free_matrix(a, YSIZE);
     MPI_Finalize();
