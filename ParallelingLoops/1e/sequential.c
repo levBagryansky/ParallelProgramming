@@ -2,8 +2,9 @@
 #include <bits/types/FILE.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <mpi.h>
 
-#define SIZE 10000
+#define SIZE 5000
 
 #define YSIZE SIZE
 #define XSIZE SIZE
@@ -38,11 +39,14 @@ int main(int argc, char **argv) {
     }
 
 //начало измерения времени
+    double time_1 = MPI_Wtime();
     for (y=1; y < YSIZE; y++){
         for (x = 8; x < XSIZE; x++){
             a[y][x] = sin(5 * a[y - 1][x - 8]);
         }
     }
+    double time_2 = MPI_Wtime();
+    printf("%lf", time_2 - time_1);
 //окончание измерения времени
 
     ff = fopen(out,"w");

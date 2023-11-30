@@ -15,11 +15,15 @@ target_link_libraries(Parallel
 if(MPI_COMPILE_FLAGS)
     set_target_properties(Parallel PROPERTIES
             COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+    set_target_properties(Sequential PROPERTIES
+            COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
 endif()
 
 if(MPI_LINK_FLAGS)
     set_target_properties(Parallel PROPERTIES
             LINK_FLAGS "${MPI_LINK_FLAGS}")
+    set_target_properties(Sequential PROPERTIES
+            LINK_FLAGS "${MPI_LINK_FLAGS}")
 endif()
 
-target_link_libraries(Sequential PRIVATE m)
+target_link_libraries(Sequential PRIVATE m ${MPI_LIBRARIES})
