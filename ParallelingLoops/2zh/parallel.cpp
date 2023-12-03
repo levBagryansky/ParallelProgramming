@@ -17,8 +17,8 @@ static inline void fill_vector(int start_y, int start_x, double** matrix) {
 
 int main (int argc, char **argv) {
     std::string out = "result_parallel.csv";
-    if (argc == 2) {
-        out = argv[1];
+    if (argc == 3) {
+        out = argv[2];
     }
     double** matrix = empty_matrix(YSIZE, XSIZE);
     FILE *ff;
@@ -30,25 +30,26 @@ int main (int argc, char **argv) {
 
 //начало измерения времени
     double time_1 = omp_get_wtime();
-    int max_threads = omp_get_max_threads();
-    omp_set_num_threads(max_threads);
-    for (int x = XSIZE - 3; x < XSIZE; ++x) {
-#pragma omp parallel for schedule(dynamic, 100)
-        for (int y = 0; y < YSIZE; ++y) {
-            fill_vector(y, x, matrix);
+    omp_set_num_threads(strtol(argv[1], nullptr, 10));
+#pragma omp parallel
+    {
+        for (int x = XSIZE - 3; x < XSIZE; ++x) {
+#pragma omp for nowait schedule(dynamic, 100)
+            for (int y = 0; y < YSIZE; ++y) {
+                fill_vector(y, x, matrix);
+            }
         }
-    }
-    for (int y = 0; y < 2; ++y) {
-#pragma omp parallel for schedule(dynamic, 100)
-        for (int x = 0; x < XSIZE - 3; ++x) {
-            fill_vector(y, x, matrix);
+        for (int y = 0; y < 2; ++y) {
+#pragma omp for nowait schedule(dynamic, 100)
+            for (int x = 0; x < XSIZE - 3; ++x) {
+                fill_vector(y, x, matrix);
+            }
         }
     }
     double time_2 = omp_get_wtime();
 //окончание измерения времени
-
-    printf("%i\n", max_threads);
     printf("%lf", time_2 - time_1);
+    fflush(stdout);
     ff = fopen(out.c_str(),"w");
     for(int y= 0; y < YSIZE; y++){
         for (int x= 0; x < XSIZE; x++){
