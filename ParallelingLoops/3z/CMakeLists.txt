@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
-project(2zh CXX)
+project(3z CXX)
 
 set(CMAKE_C_STANDARD 99)
 find_package(OpenMP REQUIRED)
