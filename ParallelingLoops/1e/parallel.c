@@ -6,7 +6,7 @@
 /**
  * Macros. Appends rank and line before the message.
  */
-#define DB_PRINT(fmt, ...) ; printf("[MPI process %d, line %d]: " fmt, my_rank, __LINE__, ##__VA_ARGS__)
+#define DB_PRINT(fmt, ...) ; //printf("[MPI process %d, line %d]: " fmt, my_rank, __LINE__, ##__VA_ARGS__)
 
 #define SIZE 5000
 
@@ -44,18 +44,11 @@ void initMatrix(double** matrix) {
 }
 
 void foldMatrixByVector(double **matrix, const double *vector, const int len) {
-    int y0 = (int) vector[0];
-    int x0 = (int) vector[1];
-    //DB_PRINT("y0 = %i, x0 = %i, len = %i\n", y0, x0, len);
-    for (int x = x0, y = y0, i = 2; i < len; ++i, ++y, x += 8) {
-        matrix[y][x] = vector[i];
-        //DB_PRINT("matrix[%i][%i] = vector[%i] = %lf\n", y, x, i, matrix[y][x]);
-        if(x >= XSIZE) {
-            //DB_PRINT("x >= XSIZE, x = %i\n", x);
-        }
-        if(y >= YSIZE) {
-            //DB_PRINT("y >= YSIZE\n");
-        }
+    int x0 = (int) vector[0];
+    DB_PRINT("x0 = %i, len = %i\n", x0, len);
+    for (int y = 0, i = 1; i < len; ++i, ++y) {
+        matrix[y][x0] = vector[i];
+        DB_PRINT("matrix[%i][%i] = vector[%i] = %lf\n", y, x0, i, matrix[y][x0]);
     }
 }
 
@@ -89,25 +82,24 @@ int main(int argc, char* argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
     double time_1 = MPI_Wtime();
     if (my_rank == 0) {
-        double buf[XSIZE / 7];
-        int roots =  XSIZE - 8 + YSIZE * 8;
+        double buf[YSIZE + 1];
+        int messages = YSIZE;
         MPI_Status status;
-        for (int i = 0; i < roots; ++i) {
+        for (int i = 0; i < messages; ++i) {
             MPI_Recv(
                 buf,
-                XSIZE,
+                YSIZE + 1,
                 MPI_DOUBLE,
                 MPI_ANY_SOURCE,
                 MPI_ANY_SOURCE,
                 MPI_COMM_WORLD,
                 &status
             );
-            int y0 = (int) buf[0];
-            int x0 = (int) buf[1];
+            int x0 = (int) buf[0];
             int message_len = 0;
             MPI_Get_count(&status, MPI_DOUBLE, &message_len);
-//            DB_PRINT("get message from %i, len = %i, y0 = %i, x0 = %i\n",
-//               status.MPI_SOURCE, message_len, y0, x0);
+            DB_PRINT("get message from %i, len = %i, x0 = %i\n",
+                     status.MPI_SOURCE, message_len, x0);
             foldMatrixByVector(matrix, buf, message_len);}
         //DB_PRINT("after getting message, matrix[%i][%i] = %lf\n", 1, 17, matrix[1][17]);
         //DB_PRINT("after getting message, matrix[%i][%i] = %lf\n", 1, 16, matrix[1][16]);
@@ -115,65 +107,30 @@ int main(int argc, char* argv[]) {
         // Not null rank
         int s = world_size - 1; // executing processes
         // Computing row roots
-        double message[XSIZE / 8 + 10];
-        for (int curr_y0 = my_rank - 1; curr_y0 < YSIZE; curr_y0 += s) {
-            for (int curr_x0 = 0; curr_x0 < 8; ++curr_x0) {
-                message[0] = (double) curr_y0;
-                message[1] = (double) curr_x0;
-                //DB_PRINT("curr_y0 = %i, curr_x0 = %i\n", curr_y0, curr_x0);
-                double *arr = message + 2;
-                int y = curr_y0;
-                int x = curr_x0;
-                arr[0] = initial_value(curr_y0, curr_x0);
-                //DB_PRINT("arr[%i] = %lf\n", 0, arr[0]);
-                int i = 1;
-                y += 1;
-                x += 8;
-                while (y < YSIZE && x < XSIZE) {
-                    arr[i] = sin(5 * arr[i - 1]);
-                    //DB_PRINT("arr[%i] = %lf, y = %i, x = %i\n", i, arr[i], y, x);
-                    i++;
-                    y += 1;
-                    x += 8;
-                }
-                //DB_PRINT("i after first while = %i\n", i);
-                MPI_Send(
-                    message,
-                    i + 2,
-                    MPI_DOUBLE,
-                    0, // the zero rank.
-                    0,
-                    MPI_COMM_WORLD
-                );
-            }
+        double message[YSIZE + 1];
+        int x0 = my_rank - 1;
+        message[0] = (double) x0;
+        double *arr = message + 1;
+        for (int y = 0; y < YSIZE; ++y) {
+            arr[y] = initial_value(y, x0);
         }
-
-        for (int curr_x0 = (my_rank-1) % 8 + 8; curr_x0 < XSIZE; curr_x0 += s) {
-            if ((my_rank-1) % 8 != curr_x0) {
-                //DB_PRINT("(%i-1) mod 8 + 8 != %i\n", my_rank, curr_x0);
+        MPI_Send(
+            message,
+            YSIZE + 1,
+            MPI_DOUBLE,
+            0, // the zero rank.
+            0,
+            MPI_COMM_WORLD
+        );
+        for (x0 = x0 + 8; x0 < XSIZE; x0 += 8) {
+            message[0] = (double) x0;
+            for (int y = YSIZE-1; y > 0; --y) {
+                arr[y] = sin(5 * arr[y - 1]);
             }
-            message[0] = 0.0;
-            message[1] = (double) curr_x0;
-            int curr_y0 = 0;
-            int x = curr_x0;
-            int y = curr_y0;
-            //DB_PRINT("curr_y0 = %i, curr_x0 = %i\n", curr_y0, curr_x0);
-            double *arr = message + 2;
-            arr[0] = initial_value(curr_y0, x);
-            y += 1;
-            x += 8;
-            int i = 1;
-            while (y < YSIZE && x < XSIZE) {
-                arr[i] = sin(5 * arr[i - 1]);
-                //DB_PRINT("arr[%i] = %lf, y = %i, x = %i\n", i, arr[i], y, x);
-                i++;
-                y += 1;
-                x += 8;
-            }
-            //DB_PRINT("i after second while = %i\n", i);
+            arr[0] = initial_value(0, x0);
             MPI_Send(
                 message,
-                i + 2,
+                YSIZE + 1,
                 MPI_DOUBLE,
                 0, // the zero rank.
                 0,
