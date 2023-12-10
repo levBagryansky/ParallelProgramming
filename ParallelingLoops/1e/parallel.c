@@ -19,26 +19,25 @@ static inline double initial_value(int y, int x) {
     return 10 * y + x;
 }
 
-double **empty_matrix(int len_y, int len_x) {
+double **empty_matrix(int len_x, int len_y) {
     double **res = (double **) calloc(len_y, sizeof(double *));
     for (int i = 0; i < len_y; ++i) {
         res[i] = (double *) calloc(len_x, sizeof(double));
     }
     return res;
-}
+}   
 
-void free_matrix(double **matrix, int len_y) {
-    for (int t = 0; t < len_y; ++t) {
+void free_matrix(double **matrix, int len) {
+    for (int t = 0; t < len; ++t) {
         free(matrix[t]);
     }
     free(matrix);
 }
 
 void initMatrix(double** matrix) {
-
     for (int i=0; i < YSIZE; i++){
         for (int j=0; j < XSIZE; j++){
-            matrix[i][j] = 10*i +j;
+            matrix[j][i] = 10*i +j;
         }
     }
 }
@@ -47,8 +46,8 @@ void foldMatrixByVector(double **matrix, const double *vector, const int len) {
     int x0 = (int) vector[0];
     DB_PRINT("x0 = %i, len = %i\n", x0, len);
     for (int y = 0, i = 1; i < len; ++i, ++y) {
-        matrix[y][x0] = vector[i];
-        DB_PRINT("matrix[%i][%i] = vector[%i] = %lf\n", y, x0, i, matrix[y][x0]);
+        matrix[x0][y] = vector[i];
+        DB_PRINT("matrix[%i][%i] = vector[%i] = %lf\n", y, x0, i, matrix[x0][y]);
     }
 }
 
@@ -75,7 +74,7 @@ int main(int argc, char* argv[]) {
     }
 
     if(my_rank == 0) {
-        matrix = empty_matrix(YSIZE, XSIZE);
+        matrix = empty_matrix(XSIZE, YSIZE);
         initMatrix(matrix);
     }
 
@@ -148,7 +147,7 @@ int main(int argc, char* argv[]) {
         //DB_PRINT("matrix[%i][%i] = %lf\n", 1, 16, matrix[1][16]);
         for(int y= 0; y < YSIZE; y++){
             for (int x= 0; x < XSIZE; x++){
-                fprintf(ff, "%f ", matrix[y][x]);
+                fprintf(ff, "%f ", matrix[x][y]);
                 //printf("%f ",a[y][x]);
                 if (x < XSIZE - 1) {
                     fprintf(ff,", ");
