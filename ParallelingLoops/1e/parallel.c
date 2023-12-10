@@ -51,6 +51,39 @@ void foldMatrixByVector(double **matrix, const double *vector, const int len) {
     }
 }
 
+void computeRows(int x_root) {
+    double message[YSIZE + 1];
+    int x0 = x_root;
+    message[0] = (double) x0;
+    double *arr = message + 1;
+    for (int y = 0; y < YSIZE; ++y) {
+        arr[y] = initial_value(y, x0);
+    }
+    MPI_Send(
+        message,
+        YSIZE + 1,
+        MPI_DOUBLE,
+        0, // the zero rank.
+        0,
+        MPI_COMM_WORLD
+    );
+    for (x0 = x0 + 8; x0 < XSIZE; x0 += 8) {
+        message[0] = (double) x0;
+        for (int y = YSIZE-1; y > 0; --y) {
+            arr[y] = sin(5 * arr[y - 1]);
+        }
+        arr[0] = initial_value(0, x0);
+        MPI_Send(
+            message,
+            YSIZE + 1,
+            MPI_DOUBLE,
+            0, // the zero rank.
+            0,
+            MPI_COMM_WORLD
+        );
+    }
+}
+
 int main(int argc, char* argv[]) {
     if (argc != 1 && argc != 2) {
         printf("Wrong number of args! Please provide 2 arguments\n");
@@ -94,7 +127,6 @@ int main(int argc, char* argv[]) {
                 MPI_COMM_WORLD,
                 &status
             );
-            int x0 = (int) buf[0];
             int message_len = 0;
             MPI_Get_count(&status, MPI_DOUBLE, &message_len);
             DB_PRINT("get message from %i, len = %i, x0 = %i\n",
@@ -106,35 +138,10 @@ int main(int argc, char* argv[]) {
         // Not null rank
         int s = world_size - 1; // executing processes
         // Computing row roots
-        double message[YSIZE + 1];
-        int x0 = my_rank - 1;
-        message[0] = (double) x0;
-        double *arr = message + 1;
-        for (int y = 0; y < YSIZE; ++y) {
-            arr[y] = initial_value(y, x0);
-        }
-        MPI_Send(
-            message,
-            YSIZE + 1,
-            MPI_DOUBLE,
-            0, // the zero rank.
-            0,
-            MPI_COMM_WORLD
-        );
-        for (x0 = x0 + 8; x0 < XSIZE; x0 += 8) {
-            message[0] = (double) x0;
-            for (int y = YSIZE-1; y > 0; --y) {
-                arr[y] = sin(5 * arr[y - 1]);
-            }
-            arr[0] = initial_value(0, x0);
-            MPI_Send(
-                message,
-                YSIZE + 1,
-                MPI_DOUBLE,
-                0, // the zero rank.
-                0,
-                MPI_COMM_WORLD
-            );
+        int root = my_rank - 1;
+        while (root < 8) {
+            computeRows(root);
+            root += s;
         }
     }
     double time_2 = MPI_Wtime();
