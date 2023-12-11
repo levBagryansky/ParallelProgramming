@@ -42,7 +42,7 @@ def main() -> int:
 
     plt.figure(figsize=[12, 5], dpi=100)
     plt.axhline(y=0, color='k')
-    plt.plot(list(sizes), list(map(lambda val: accelerations[1] / val, accelerations)), '-o', markersize=4, linewidth=2, label='y1', color=np.random.rand(3))
+    plt.plot(list(sizes), list(map(lambda val: seq / val, accelerations)), '-o', markersize=4, linewidth=2, label='y1', color=np.random.rand(3))
 
     plt.xlabel("Num of threads")
     plt.ylabel("time / seq_time")
